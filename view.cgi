@@ -1,3 +1,6 @@
+# See LICENCE for licence details
+# Or go to http://files.entropy.net.nz/LICENCE
+
 #!/usr/bin/perl -w
 use CGI qw(:standard);
 use strict;
