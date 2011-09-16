@@ -2,6 +2,7 @@
 
 use CGI qw(:standard);
 use CGI::Carp qw(fatalsToBrowser);
+use Date::Format;
 use warnings;
 use strict;
 
@@ -34,31 +35,27 @@ sub parse_config()
   return %settings;
 }
 
-my ($title, $body, $error_css, %config);
+
+my ($title, $body, $error_css, $sep, %config);
 my $q = CGI->new();
 my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
 
 %config = parse_config();
+$sep = "-";
 $title = $q->param("title");
 $body = $q->param("body");
 if ($title || $body)
 {
-  # Replace <,> with HTML codes to prevent naughtiness
-  $title =~ s/</&lt;/g;
-  $title =~ s/>/&gt;/g;
-  $body =~ s/</&lt;/g;
-  $body =~ s/>/&gt;/g;
-
+  my $name = string_to_hex($sec.$sep.$min.$sep.$hour.$sep.$mday.$sep.$mon.$sep.$year.$sep.$wday.$sep.$yday.$sep.$isdst);
+  open(OUTPUT, ">posts/$name") || die "Could not open post output file: $!\n";
+  print OUTPUT "title=$title\n";
+  print OUTPUT $body;
+  close(OUTPUT);
 }
 else
 {
   print $q->header,
         $q->start_html(-title=>$config{'error_title'}),
         $q->p("Both title and body need to be filled in. Press back and try again"),
-        $q->end_html();
+        $q->end_html(), "\n";
 }
-
-my $sep = "-";
-my $time = string_to_hex($sec.$sep.$min.$sep.$hour.$sep.$mday.$sep.$mon.$sep.$year.$sep.$wday.$sep.$yday.$sep.$isdst);
-my $reverse = hex_to_string($time);
-print "$time\n$reverse\n";
