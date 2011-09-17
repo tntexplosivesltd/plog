@@ -46,17 +46,17 @@ sub print_post
 }
 
 
-my (@files, $next, $per_page, $post, $start);;
+my (@files, $next_page_start, $per_page, $post, $prev_page_start, $start, $supplied_per_page);
 my $q = CGI->new;
 my %config = plog_utils::parse_config("config/view.conf");
 
 # take parameters and assign defaults if non-exist
 $start = $q->param("start");
 $per_page = $q->param("per_page");
+$supplied_per_page = $per_page;
 $post = $q->param("post");
-$start = 0 unless defined($start);
+$start = 0 unless ($start > 0);
 $per_page = 8 unless defined($per_page);
-$start = abs($start);
 $per_page = abs($per_page);
 
 if ($post)
@@ -76,19 +76,18 @@ else
 
 # validate parameters
 $start = @files - 1 if ($start > @files);
-if (($start + $per_page) > @files)
+if (($start + $per_page) >= @files)
 {
   $per_page = @files - $start;
-  $next = $start + $per_page;
 }
-$per_page = 1 if ($per_page < 1);
-
+$next_page_start = $start + $per_page;
+$prev_page_start = $start - $supplied_per_page;
+$prev_page_start = 0 if ($prev_page_start < 0);
 
 # print start of page
 print $q->header,
       $q->start_html("$config{'post_title'}"),
-      $q->h1("$config{'blog_title'}"),"\n";
-
+      $q->h1("$config{'blog_title'} - $next_page_start"),"\n";
 # print out blog posts
 for (my $i = $start; $i < $start+$per_page; $i++)
 {
@@ -96,4 +95,16 @@ for (my $i = $start; $i < $start+$per_page; $i++)
 }
 
 # print tail of HTML
+
+# Link to next page of posts
+if ($start > 0)
+{
+  print $q->a({href=>"view.cgi?start=$prev_page_start&per_page=$supplied_per_page"}, "<- Previous"), "    "; 
+}
+
+# Link to previous posts
+if ($next_page_start < @files)
+{
+  print $q->a({href=>"view.cgi?start=$next_page_start&per_page=$supplied_per_page"}, "Next ->");
+}
 print $q->end_html();
