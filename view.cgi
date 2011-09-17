@@ -5,6 +5,7 @@
 
 use CGI qw(:standard start_ul);
 use CGI::Carp qw(fatalsToBrowser);
+use plog_utils;
 use strict;
 
 sub print_post
@@ -12,6 +13,8 @@ sub print_post
   my $line;
   my $title_found = 0;
   my $file = $_[0];
+  my $q = $_[1];
+  my $date = 
   open(POST_FILE, "<$file") || die "Could not open $file: $!\n";
   $line = <POST_FILE>;
   return if (!$line);
@@ -26,8 +29,7 @@ sub print_post
 }
 
 
-my $start;
-my $per_page;
+my ($start, $per_page, $post);
 my @files = glob("posts/*");
 my $q = CGI->new;
 
@@ -35,10 +37,16 @@ my $q = CGI->new;
 # take parameters and assign defaults if non-exist
 $start = $q->param("start");
 $per_page = $q->param("per_page");
+$post = $q->param("post");
 $start = 0 unless defined($start);
 $per_page = 8 unless defined($per_page);
 $start = abs($start);
 $per_page = abs($per_page);
+
+if ($post)
+{
+  @files = "posts/$post";
+}
 
 # print start of page
 print $q->header,
@@ -56,7 +64,7 @@ $per_page = 1 if ($per_page < 1);
 for (my $i = $start; $i < $start+$per_page; $i++)
 {
   #print $q->li("$files[$i]"),"\n";
-  print_post($files[$i]);
+  print_post($files[$i], $q);
 }
 
 # print tail of HTML
