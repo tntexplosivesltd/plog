@@ -11,10 +11,23 @@ use plog_utils;
 use warnings;
 use strict;
 
-sub print_post
+sub get_include
+{
+  my $output;
+  my $file = $_[0];
+  open(INCLUDE, "<$ENV{'DOCUMENT_ROOT'}$file") || die "Could not open include file $file: $!\n";
+  while(<INCLUDE>)
+  {
+    $output .= $_;
+  }
+  close(INCLUDE);
+  return $output;
+}
+
+sub get_post
 {
   my ($file, $q, %config) = @_;
-  my ($body, $formatted_date, $formatted_time, $line, @temp_body, $terminator, @time, $title);
+  my ($body, $formatted_date, $formatted_time, $line, $post, @temp_body, $terminator, @time, $title);
   my $title_found = 0;
 
   my $timedate = basename($file);
@@ -32,7 +45,7 @@ sub print_post
   $body = join $terminator, @temp_body;
   close(POST_FILE);
 
-  open(POST_TEMPLATE, "<$config{'template'}") || die "Could not open post template: $!\n";
+  open(POST_TEMPLATE, "<$config{'post_template'}") || die "Could not open post template: $!\n";
   while (<POST_TEMPLATE>)
   {
     $line = $_;
@@ -40,15 +53,21 @@ sub print_post
     $line =~ s/!DATE!/$formatted_date/g;
     $line =~ s/!TIME!/$formatted_time/g;
     $line =~ s/!BODY!/$body/g;
-    print $line;
+    $post .= $line;
   }
   close(POST_TEMPLATE);
+  return $post;
 }
 
 
-my (@files, $next_page_start, $per_page, $post, $prev_page_start, $start, $supplied_per_page);
+my (@files, @includes, $nav_links, $next_page_start, $per_page, $post, $posts, $prev_page_start, $start, $supplied_per_page,);
 my $q = CGI->new;
 my %config = plog_utils::parse_config("config/view.conf");
+my @include_files = split(/\s*,\s/, $config{'includes'});
+for my $include(@include_files)
+{
+  push(@includes, get_include($include));
+}
 
 # take parameters and assign defaults if non-exist
 $start = $q->param("start");
@@ -56,7 +75,7 @@ $per_page = $q->param("per_page");
 $supplied_per_page = $per_page;
 $post = $q->param("post");
 $start = 0 unless ($start > 0);
-$per_page = 8 unless defined($per_page);
+$per_page = $config{'posts_per_page'} unless defined($per_page);
 $per_page = abs($per_page);
 
 if ($post)
@@ -66,7 +85,7 @@ if ($post)
   {
     open(TITLE, "<$files[0]") || die "Can not open post $files[0]: $!\n";
     $config{'post_title'} = <TITLE> if ($config{'override'} eq "no");
-    close (TITLE);
+    close(TITLE);
   }
 }
 else
@@ -84,27 +103,32 @@ $next_page_start = $start + $per_page;
 $prev_page_start = $start - $supplied_per_page;
 $prev_page_start = 0 if ($prev_page_start < 0);
 
-# print start of page
-print $q->header,
-      $q->start_html("$config{'post_title'}"),
-      $q->h1("$config{'blog_title'} - $next_page_start"),"\n";
-# print out blog posts
 for (my $i = $start; $i < $start+$per_page; $i++)
 {
-    print_post($files[$i], $q, %config);
+  $posts .= get_post($files[$i], $q, %config);
 }
-
-# print tail of HTML
 
 # Link to next page of posts
 if ($start > 0)
 {
-  print $q->a({href=>"view.cgi?start=$prev_page_start&per_page=$supplied_per_page"}, "<- Previous"), "    "; 
+  $nav_links .= $q->a({href=>"view.cgi?start=$prev_page_start&per_page=$supplied_per_page"}, "<- Previous"), "    "; 
 }
-
 # Link to previous posts
 if ($next_page_start < @files)
 {
-  print $q->a({href=>"view.cgi?start=$next_page_start&per_page=$supplied_per_page"}, "Next ->");
+  $nav_links .= $q->a({href=>"view.cgi?start=$next_page_start&per_page=$supplied_per_page"}, "Next ->");
 }
-print $q->end_html();
+
+print $q->header;
+open(PAGE_TEMPLATE, "<$config{'page_template'}") || die "Could not open page template: $!\n";
+while(<PAGE_TEMPLATE>)
+{
+  my $line = $_;
+  $line =~ s/!POST_TITLE!/$config{'post_title'}/g;
+  $line =~ s/!INCLUDE_(\d+)!/$includes[$1-1]/g;
+  $line =~ s/!BLOG_TITLE!/$config{'blog_title'}/g;
+  $line =~ s/!POSTS!/$posts/g;
+  $line =~ s/!NAV_LINKS!/$nav_links/g;
+  print $line;
+}
+close(PAGE_TEMPLATE);
