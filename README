@@ -1,1 +1,6 @@
 plog - minimal Perl blogging platform
+
+Requires: 
+  * CGI
+  * Date::Format
+  * File::Basename

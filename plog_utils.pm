@@ -21,14 +21,16 @@ sub string_to_hex
 }
 
 # parse a config file
-sub parse_config()
+sub parse_config
 {
+  my $config_file = $_[0];
   my (%settings, @setting, $line);
-  open(SETTINGS, "add.conf") || die "Could not open add config: $!\n";
+  open(SETTINGS, "<$config_file") || die "Could not open $config_file: $!\n";
   while(<SETTINGS>)
   {
     chomp($line = $_);
-    @setting = split(/\s*=/,$line) if ($line =~ /=/);
+    next if ($line =~ /^#/);
+    @setting = split(/\s*=\s*/, $line, 2) if ($line =~ /=/);
     $settings{$setting[0]} = $setting[1];
   }
   close(SETTINGS);
