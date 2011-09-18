@@ -33,6 +33,7 @@ sub get_post
   my $timedate = basename($file);
   #my $timedate = $file;
   ($time[5],$time[4],$time[3],$time[2],$time[1],$time[0],$time[6],$time[7],$time[8]) = split(/-/, $timedate);
+  $time[4]--;
   $formatted_time = strftime($config{'time_format'}, @time, $config{'timezone'});
   $formatted_date = strftime($config{'date_format'}, @time, $config{'timezone'});
   return if (!(-e $file) || (-z $file));
@@ -62,7 +63,7 @@ sub get_post
 
 my (@files, @includes, $nav_links, $next_page_start, $per_page, $post, $posts, $prev_page_start, $start, $supplied_per_page,);
 my $q = CGI->new;
-my %config = plog_utils::parse_config("config/view.conf");
+my %config = plog_utils::parse_config("config/blog.conf");
 my @include_files = split(/\s*,\s/, $config{'includes'});
 for my $include(@include_files)
 {
@@ -72,11 +73,11 @@ for my $include(@include_files)
 # take parameters and assign defaults if non-exist
 $start = $q->param("start");
 $per_page = $q->param("per_page");
-$supplied_per_page = $per_page;
 $post = $q->param("post");
 $start = 0 unless ($start > 0);
-$per_page = $config{'posts_per_page'} unless defined($per_page);
+$per_page = $config{'posts_per_page'} unless ($per_page);
 $per_page = abs($per_page);
+$supplied_per_page = $per_page;
 
 if ($post)
 {
@@ -127,6 +128,7 @@ while(<PAGE_TEMPLATE>)
   $line =~ s/!POST_TITLE!/$config{'post_title'}/g;
   $line =~ s/!INCLUDE_(\d+)!/$includes[$1-1]/g;
   $line =~ s/!BLOG_TITLE!/$config{'blog_title'}/g;
+  $line =~ s/!BLOG_DESC!/$config{'blog_desc'}/g;
   $line =~ s/!POSTS!/$posts/g;
   $line =~ s/!NAV_LINKS!/$nav_links/g;
   print $line;
